@@ -118,7 +118,9 @@ def build_export(db: OrmSession, case: models.Case, actor: models.User) -> model
     export_id = new_id("exp")
     path = out_dir / f"{export_id}.md"
     path.write_text(md, encoding="utf-8")
-    (out_dir / f"{export_id}.json").write_text(json.dumps(packet, indent=2), encoding="utf-8")
+    (out_dir / f"{export_id}.json").write_text(
+        json.dumps(packet, indent=2, default=str), encoding="utf-8"
+    )
     digest = hashlib.sha256(md.encode()).hexdigest()
 
     record = models.Export(

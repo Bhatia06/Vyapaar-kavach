@@ -15,7 +15,9 @@ from sqlalchemy.orm import Session
 POLICY_VERSION = "exceptions.v1"
 # Freshness window for the demo: provider evidence older than this is "stale"
 # and the UI says so (a configurable test setting, not a provider SLA).
-FRESHNESS_LIMIT = timedelta(seconds=120)
+# 15 minutes keeps seeded demo cases fresh; a simulated outage still marks
+# evidence STALE explicitly on refresh.
+FRESHNESS_LIMIT = timedelta(minutes=15)
 
 REASON_TEXT = {
     "CASE_UNMATCHED": "The claim is not linked to a verified payment yet.",
