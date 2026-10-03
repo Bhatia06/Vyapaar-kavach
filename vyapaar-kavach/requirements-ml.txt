@@ -1,0 +1,7 @@
+# ML research track (original-domain GATv2 reproduction).
+# These versions are pinned to the verified working environment used to
+# reproduce the model outputs documented in ml/model_card.md.
+torch==2.5.1
+torch_geometric==2.8.0
+scikit-learn>=1.5
+numpy>=1.26

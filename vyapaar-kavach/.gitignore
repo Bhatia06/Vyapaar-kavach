@@ -1,0 +1,17 @@
+# Runtime state & artifacts
+vyapaar.db
+*.db
+services/api/artifacts/exports/
+ml/artifacts/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# Frontend
+apps/web/node_modules/
+apps/web/dist/
+
+# Editors/OS
+.vscode/
+Thumbs.db
