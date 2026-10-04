@@ -1,0 +1,188 @@
+{
+  "project": "Vyapaar Kavach",
+  "mode": "DEMO_LOCAL",
+  "generated": "2026-10-03",
+  "how_to_verify": "Every claim lists evidence files plus an exact command or API sequence. Commands marked [tests] run with `python -m pytest <path> -q` from vyapaar-kavach/. Commands marked [server] need: 1) python -m services.api.fixtures.seed --reset  2) uvicorn services.api.app.main:app --port 8000. Research claims additionally require '../dataset1 (1).pt' and '../GAT_Model_Final (2).pt' (paths in .env.example).",
+  "claims": [
+    {
+      "id": "JC-01",
+      "category": "authentication",
+      "claim": "Seeded demo users authenticate; role and tenant are resolved server-side from memberships; bad passwords are rejected with 401.",
+      "evidence_paths": ["services/api/app/auth.py", "services/api/app/api/routes/auth.py", "services/api/fixtures/seed.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_login_and_me -q",
+      "expected_result": "200 on login; /v1/auth/me returns role owner, tenant tnt_demo01, environment DEMO_LOCAL; wrong password -> 401",
+      "test": "services/api/tests/test_workflow.py::test_login_and_me",
+      "status": "verified"
+    },
+    {
+      "id": "JC-02",
+      "category": "workflow",
+      "claim": "Fixture F1 (Rs 3,000 succeeded payment + Rs 500 PENDING refund) yields action CHECK_EXISTING_REFUND with reason REFUND_ALREADY_PENDING and no execution.",
+      "evidence_paths": ["services/api/fixtures/seed.py", "services/api/app/policy.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_fixture_f1_pending_refund_recommendation -q",
+      "expected_result": "action=CHECK_EXISTING_REFUND, reason REFUND_ALREADY_PENDING, execution_allowed=false, model_used_for_action=false",
+      "test": "services/api/tests/test_workflow.py::test_fixture_f1_pending_refund_recommendation",
+      "status": "verified"
+    },
+    {
+      "id": "JC-03",
+      "category": "workflow",
+      "claim": "Fixture F2 (refund outcome UNKNOWN after timeout) keeps exposure visible: REFUND_OUTCOME_UNKNOWN and missing fact current_refund_outcome; no replacement payment is suggested.",
+      "evidence_paths": ["services/api/fixtures/seed.py", "services/api/app/policy.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_fixture_f2_unknown_refund_recommendation -q",
+      "expected_result": "action=CHECK_EXISTING_REFUND, reason REFUND_OUTCOME_UNKNOWN, current_refund_outcome in missing_facts",
+      "test": "services/api/tests/test_workflow.py::test_fixture_f2_unknown_refund_recommendation",
+      "status": "verified"
+    },
+    {
+      "id": "JC-04",
+      "category": "matching",
+      "claim": "Fixture F3 (two identical Rs 799 payments, no reference) never auto-binds: case stays UNMATCHED, at least two candidates are listed, recommendation is DISAMBIGUATE_PAYMENT.",
+      "evidence_paths": ["services/api/fixtures/seed.py", "services/api/app/api/routes/cases.py", "services/api/app/policy.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_fixture_f3_ambiguous_amount -q",
+      "expected_result": "match_status=UNMATCHED; candidates include pay_mock_txn_799_a and pay_mock_txn_799_b; reason MULTIPLE_PAYMENT_MATCHES",
+      "test": "services/api/tests/test_workflow.py::test_fixture_f3_ambiguous_amount",
+      "status": "verified"
+    },
+    {
+      "id": "JC-05",
+      "category": "matching",
+      "claim": "Payment binding happens only via an explicit, tenant-scoped match request.",
+      "evidence_paths": ["services/api/app/api/routes/cases.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_match_is_explicit -q",
+      "expected_result": "POST match -> match_status MATCHED with chosen payment_id; ambiguity reason code disappears",
+      "test": "services/api/tests/test_workflow.py::test_match_is_explicit",
+      "status": "verified"
+    },
+    {
+      "id": "JC-06",
+      "category": "events",
+      "claim": "Provider outage is surfaced honestly: refresh returns HTTP 503 PROVIDER_UNAVAILABLE, the payment keeps its last status, verification becomes STALE; after outage refresh succeeds.",
+      "evidence_paths": ["services/api/app/providers/mock.py", "services/api/app/ingest.py", "services/api/app/api/routes/payments.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_payment_refresh_outage_marks_stale -q",
+      "expected_result": "503 with code PROVIDER_UNAVAILABLE; status stays SUCCEEDED; verification STALE; recovered to VERIFIED after outage_off",
+      "test": "services/api/tests/test_workflow.py::test_payment_refresh_outage_marks_stale",
+      "status": "verified"
+    },
+    {
+      "id": "JC-07",
+      "category": "events",
+      "claim": "Duplicate provider events are acknowledged without repeating side effects (fingerprint dedup).",
+      "evidence_paths": ["services/api/app/ingest.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_duplicate_event_no_side_effects -q",
+      "expected_result": "2nd identical event -> duplicate=true; exactly one provider_events row",
+      "test": "services/api/tests/test_workflow.py::test_duplicate_event_no_side_effects",
+      "status": "verified"
+    },
+    {
+      "id": "JC-08",
+      "category": "events",
+      "claim": "A delayed PENDING event never silently regresses a SUCCEEDED payment: status preserved, verification flagged CONFLICTED, observation retained.",
+      "evidence_paths": ["services/api/app/ingest.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_delayed_pending_event_does_not_regress -q",
+      "expected_result": "status=SUCCEEDED, verification=CONFLICTED, >=1 CONFLICTED observation persisted",
+      "test": "services/api/tests/test_workflow.py::test_delayed_pending_event_does_not_regress",
+      "status": "verified"
+    },
+    {
+      "id": "JC-09",
+      "category": "access",
+      "claim": "Cross-tenant reads return 404 (existence is not leaked), enforced by server-side scoping on every object lookup.",
+      "evidence_paths": ["services/api/app/api/routes/payments.py", "services/api/app/api/routes/cases.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_cross_tenant_denial -q",
+      "expected_result": "404 for a payment belonging to another tenant",
+      "test": "services/api/tests/test_workflow.py::test_cross_tenant_denial",
+      "status": "verified"
+    },
+    {
+      "id": "JC-10",
+      "category": "access",
+      "claim": "Staff cannot resolve cases (owner-only); stale edits are rejected with 409 STALE_VERSION via the case version guard.",
+      "evidence_paths": ["services/api/app/api/routes/cases.py", "services/api/app/auth.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_staff_cannot_resolve -q",
+      "expected_result": "staff resolve -> 403 FORBIDDEN_ROLE; owner resolve 200; repeat with old version -> 409 STALE_VERSION",
+      "test": "services/api/tests/test_workflow.py::test_staff_cannot_resolve",
+      "status": "verified"
+    },
+    {
+      "id": "JC-11",
+      "category": "export",
+      "claim": "Evidence exports trace to stored records: refund references appear, observations carry source labels, limitations section exists, and a SHA-256 digest is recorded.",
+      "evidence_paths": ["services/api/app/export.py", "services/api/app/api/routes/exports.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_export_traces_provenance -q",
+      "expected_result": "64-hex sha256; markdown contains REF-500-001 and Limitations; JSON observations include provider_mock source kinds",
+      "test": "services/api/tests/test_workflow.py::test_export_traces_provenance",
+      "status": "verified"
+    },
+    {
+      "id": "JC-12",
+      "category": "honesty",
+      "claim": "Refunds have no arbitrary destination field anywhere in the schema — supported refunds return to the original payment source by construction.",
+      "evidence_paths": ["services/api/app/models.py", "services/api/app/api/routes/exports.py"],
+      "verify_command": "[server] python -c \"from services.api.app.models import Refund; print([c.key for c in Refund.__table__.columns])\"",
+      "expected_result": "no destination/account field in the column list",
+      "test": null,
+      "status": "verified"
+    },
+    {
+      "id": "JC-13",
+      "category": "honesty",
+      "claim": "No execution path exists in this prototype: every recommendation carries execution_allowed=false; there is no endpoint that submits refunds.",
+      "evidence_paths": ["services/api/app/policy.py", "services/api/app/api/routes"],
+      "verify_command": "[server] python -c \"import re; src=open('services/api/app/policy.py',encoding='utf-8').read(); print('execution_allowed\": False' in src)\"",
+      "expected_result": "True; and no submit_refund route exists under services/api/app/api/routes",
+      "test": "services/api/tests/test_workflow.py::test_fixture_f1_pending_refund_recommendation",
+      "status": "verified"
+    },
+    {
+      "id": "JC-14",
+      "category": "research",
+      "claim": "Research runs perform REAL checkpoint inference on held-out Elliptic2 graphs, persist dataset/checkpoint SHA-256 hashes, and report precision/recall/F1.",
+      "evidence_paths": ["ml/model.py", "ml/service.py", "services/api/app/api/routes/research.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_research_real.py -q",
+      "expected_result": "abstained=false; data_mode=ORIGINAL_DOMAIN_RESEARCH; 64-hex hashes; 32-example scores with metrics",
+      "test": "services/api/tests/test_research_real.py::test_research_run_real_inference",
+      "status": "verified"
+    },
+    {
+      "id": "JC-15",
+      "category": "research",
+      "claim": "Unsupported tasks (e.g. merchant-case scoring) abstain with an explicit reason — a model never fabricates a score.",
+      "evidence_paths": ["services/api/app/api/routes/research.py"],
+      "verify_command": "[tests] python -m pytest services/api/tests/test_workflow.py::test_research_abstains_on_bad_task -q",
+      "expected_result": "200 with abstained=true, abstention_reason=UNSUPPORTED_TASK",
+      "test": "services/api/tests/test_workflow.py::test_research_abstains_on_bad_task",
+      "status": "verified"
+    },
+    {
+      "id": "JC-16",
+      "category": "research",
+      "claim": "Model performance is honestly reproduced: full 24,363-graph test set, threshold 0.79 locked on validation, F1=0.5558, PR-AUC=0.5906, with hashes in metrics.json.",
+      "evidence_paths": ["ml/reproduce.py", "ml/artifacts/metrics.json", "ml/model_card.md"],
+      "verify_command": "[server] python -m ml.reproduce",
+      "expected_result": "recompute prints precision 0.6988 / recall 0.4614 / F1 0.5558 / PR-AUC 0.5906 (GPU or CPU)",
+      "test": null,
+      "status": "verified"
+    },
+    {
+      "id": "JC-17",
+      "category": "workflow",
+      "claim": "Merchant records survive server restarts (SQL-backed persistence; jobs and observations are durable rows, not memory state).",
+      "evidence_paths": ["services/api/app/db.py", "services/api/app/models.py"],
+      "verify_command": "[server] seed, create a case via API, stop uvicorn, restart, GET /v1/cases -> the case is still present",
+      "expected_result": "the created case persists with notes across a restart",
+      "test": null,
+      "status": "verified"
+    },
+    {
+      "id": "JC-18",
+      "category": "honesty",
+      "claim": "Every screen and export is labelled Synthetic data / Mock provider; model output is presented only as original-domain research with an abstention policy.",
+      "evidence_paths": ["apps/web/src/components/Banner.tsx", "apps/web/src/pages/Research.tsx", "services/api/app/export.py", "VYAPAAR_KAVACH_PROJECT_DOCS.md"],
+      "verify_command": "[server] open any page -> persistent banner; POST /v1/cases/{id}/exports -> packet Limitations section",
+      "expected_result": "banner visible on every page; exports include limitations list",
+      "test": "services/api/tests/test_workflow.py::test_export_traces_provenance",
+      "status": "verified"
+    }
+  ]
+}

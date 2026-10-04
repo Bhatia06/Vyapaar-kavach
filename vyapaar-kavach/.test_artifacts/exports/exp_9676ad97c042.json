@@ -1,0 +1,88 @@
+{
+  "export": {
+    "generated_at": "2026-10-03T20:36:40.104010+00:00",
+    "environment": "DEMO_LOCAL",
+    "schema_version": "case-export.v1"
+  },
+  "case": {
+    "id": "case_74ce7d44cd01",
+    "claim_type": "REFUND_NOT_RECEIVED",
+    "claimed_amount": "Rs 500.00",
+    "reference_given": "ORD-3000-RAM",
+    "status": "OPEN",
+    "match_status": "MATCHED",
+    "created_at": "2026-10-03T20:36:40.089287",
+    "resolution": null
+  },
+  "payment": {
+    "order_ref": "ORD-3000-RAM",
+    "provider_txn_id": "MOCK-TXN-3000-001",
+    "amount": "Rs 3,000.00",
+    "status": "SUCCEEDED",
+    "verification": "VERIFIED",
+    "last_checked_at": "2026-10-03T20:26:21.434267"
+  },
+  "refunds": [
+    {
+      "refund_ref": "REF-500-001",
+      "amount": "Rs 500.00",
+      "status": "PENDING",
+      "origin": "EXTERNAL",
+      "last_checked_at": "2026-10-03T20:26:21.434267"
+    }
+  ],
+  "observations": [
+    {
+      "id": "obs_sync_pay_mock_txn_3000_001",
+      "subject": "payment:pay_mock_txn_3000_001",
+      "source_kind": "provider_mock",
+      "verification_status": "VERIFIED",
+      "message": "Initial sync: provider reports payment SUCCESS.",
+      "event_time": "2026-10-03T16:46:21.434267",
+      "observed_at": "2026-10-03T16:48:21.434267"
+    },
+    {
+      "id": "obs_sync_rfd_ref_500_001",
+      "subject": "refund:REF-500-001",
+      "source_kind": "provider_mock",
+      "verification_status": "VERIFIED",
+      "message": "Initial sync: provider reports refund PENDING for REF-500-001.",
+      "event_time": "2026-10-03T18:36:21.434267",
+      "observed_at": "2026-10-03T18:38:21.434267"
+    }
+  ],
+  "notes": [
+    {
+      "author": "Asha (Owner)",
+      "at": "2026-10-03T20:36:40.089287",
+      "text": "Refund not received"
+    },
+    {
+      "author": "Asha (Owner)",
+      "at": "2026-10-03T20:36:40.095023",
+      "text": "Customer called again."
+    }
+  ],
+  "recommendation": {
+    "case_id": "case_74ce7d44cd01",
+    "policy_version": "exceptions.v1",
+    "action": "CHECK_EXISTING_REFUND",
+    "reason_codes": [
+      "REFUND_ALREADY_PENDING"
+    ],
+    "summary": "A refund already exists for this payment and is pending. Track it before doing anything else.",
+    "supporting_observation_ids": [
+      "obs_sync_pay_mock_txn_3000_001",
+      "obs_sync_rfd_ref_500_001"
+    ],
+    "missing_facts": [],
+    "provider_last_checked_at": "2026-10-03 20:26:21.434267",
+    "model_used_for_action": false,
+    "execution_allowed": false
+  },
+  "limitations": [
+    "Synthetic/demo data with a mock payment provider; no real funds are involved.",
+    "This packet organises available evidence; it is not a legal determination, does not prove innocence or fault, and does not guarantee payment finality.",
+    "A file hash detects later modification of this export only."
+  ]
+}
